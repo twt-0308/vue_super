@@ -3,11 +3,27 @@
     <nav-bar class="home-nav">
       <div slot="center">购物街</div>
     </nav-bar>
-    <scroll class="content" @pulling="loadMore" :pullUpLoad="true" ref="scroll" :probe-type="3" @scroll="contentScroll">
-      <home-swiper :banner="banner" />
+    <tab-control
+      ref="tabControl1"
+      :titles="['流行', '新款', '精选']"
+      @tabClick="tabClick"
+      class="tabControl"
+      v-show="isTabFixed"
+    />
+    <scroll class="content"
+            @pulling="loadMore"
+            :pullUpLoad="true"
+            ref="scroll"
+            :probe-type="3"
+            @scroll="contentScroll">
+      <home-swiper ref="homeSwiper" :banner="banner" @swiperImageLoad="swiperImageLoad" />
       <recommend-view :recommend="recommend"/>
       <feature/>
-      <tab-control :titles="['流行', '新款', '精选']" @tabClick="tabClick"/>
+      <tab-control
+              ref="tabControl2"
+              :titles="['流行', '新款', '精选']"
+              @tabClick="tabClick"
+      />
       <goods-list :goods="showGoods"/>
     </scroll>
     <!-- 滚回头部 -->
@@ -24,9 +40,10 @@ import NavBar from 'components/common/navbar/NavBar.vue'
 import Scroll from 'components/common/scroll/Scroll'
 import TabControl from 'components/content/tabControl/TabControl'
 import GoodsList from 'components/content/goods/GoodsList'
-import BackTop from 'components/content/backTop/BackTop'
 
 import { getHomeMultidata, getHomeGoods } from 'network/home.js'
+import { backTopMixin } from 'common/mixin.js'
+import { debounce } from 'common/utils.js'
 export default {
   data() {
     return {
@@ -39,10 +56,14 @@ export default {
       },
       // 默认展示数据
       currentType: 'pop',
-      // 控制返回顶部隐藏
-      isShow: false
+      // 吸顶位置
+      tabOffsetTop: 0,
+      isTabFixed: false,
+      // 记录离开时的 y 轴
+      scrollY: 0
     }
   },
+  mixins: [backTopMixin],
   components: {
     NavBar,
     HomeSwiper,
@@ -50,8 +71,7 @@ export default {
     Feature,
     TabControl,
     GoodsList,
-    Scroll,
-    BackTop
+    Scroll
   },
   computed: {
     // 展示对应数据
@@ -62,9 +82,30 @@ export default {
   created() {
     // 1.请求多个数据
     this.getList()
+    // 2.请求商品数据
     this.getGoods('pop')
     this.getGoods('new')
     this.getGoods('sell')
+  },
+  mounted() {
+    const refresh = debounce(this.$refs.scroll.refresh, 200)
+    // 监听图片加载
+    this.$bus.$on('homeImageLoad', () => {
+      this.$refs.scroll && refresh()
+    })
+  },
+  activated() {
+    this.$refs.scroll.scrollTo(0, this.scrollY, 0)
+    this.$refs.scroll.refresh()
+    // 开启轮播图
+    this.$refs.homeSwiper.$refs.people.startTimer()
+    // console.log(this.scrollY)
+  },
+  deactivated() {
+    this.scrollY = this.$refs.scroll.getScrollY()
+    // console.log(this.scrollY)
+    // 离开停止轮播图
+    this.$refs.homeSwiper.$refs.people.stopTimer()
   },
   methods: {
     /*
@@ -82,16 +123,22 @@ export default {
         case 2:
           this.currentType = 'sell'
       }
-    },
-    backClick() {
-      this.$refs.scroll.scrollTo(0, 0)
+      this.$refs.tabControl1.currentIndex = index
+      this.$refs.tabControl2.currentIndex = index
     },
     contentScroll(position) {
+      // 1.判断BackTop是否显示
       this.isShow = (-position.y) > 1000
+      // 2.决定tabControl是否吸顶（position: fixed）
+      this.isTabFixed = (-position.y) > this.tabOffsetTop
     },
     loadMore() {
       this.getGoods(this.currentType)
       this.$refs.scroll.scroll.refresh()
+    },
+    // 监听轮播图加载
+    swiperImageLoad() {
+      this.tabOffsetTop = this.$refs.tabControl2.$el.offsetTop
     },
     /*
     *
@@ -135,5 +182,9 @@ export default {
     bottom: 49px;
     left: 0;
     right: 0;
+  }
+  .tabControl {
+    position: relative;
+    z-index: 9;
   }
 </style>

@@ -1,7 +1,10 @@
 <template>
   <div>
     <main-tab-bar/>
-    <router-view/>
+    <!-- 切换组件不销毁 -->
+    <keep-alive exclude="Detail">
+      <router-view/>
+    </keep-alive>
   </div>
 </template>
 

@@ -32,22 +32,34 @@ export default {
       pullUpLoad: this.pullUpLoad // 下拉加载更多
     })
     this.scroll.scrollTo(0, 0)
-    // 2. 监听滚动的位置
-    this.scroll.on('scroll', position => {
-      this.$emit('scroll', position)
-    })
-    // 3.监听上拉事件
-    this.scroll.on('pullingUp', () => {
-      this.$emit('pulling')
-    })
+    // 2. 监听滚动的位置 发出事件scroll
+    if (this.probeType === 2 || this.probeType === 3) {
+      this.scroll.on('scroll', position => {
+        this.$emit('scroll', position)
+      })
+    }
+    // 3.监听上拉事件 发出事件pullingUp
+    if (this.pullUpLoad) {
+      this.scroll.on('pullingUp', () => {
+        this.$emit('pulling')
+      })
+    }
   },
   methods: {
     scrollTo(x, y, time = 500) {
-      this.scroll.scrollTo(x, y, time)
+      this.scroll && this.scroll.scrollTo(x, y, time)
     },
     // 下拉加载多次
     finishPullUp() {
-      this.scroll.finishPullUp()
+      this.scroll && this.scroll.finishPullUp()
+    },
+    // 更新高度
+    refresh() {
+      this.scroll && this.scroll.refresh && this.scroll.refresh()
+    },
+    // 返回记录的y
+    getScrollY() {
+      return this.scroll ? this.scroll.y : 0
     }
   }
 }

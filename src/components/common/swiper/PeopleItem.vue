@@ -5,7 +5,7 @@
 </template>
 
 <script>
-export default { name: 'Slide' }
+export default {}
 </script>
 
 <style scoped>
